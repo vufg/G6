@@ -25,9 +25,60 @@ describe('brush-select', () => {
       },
     });
   });
+  const node1 = graph.addItem('node', { id: 'node1', x: 100, y: 100, label: 'node1' });
+  const node2 = graph.addItem('node', { id: 'node2', x: 200, y: 200, label: 'node2' });
+  const node3 = graph.addItem('node', { id: 'node3', x: 80, y: 150, label: 'node3' });
+  graph.addItem('edge', { source: 'node1', target: 'node2' });
+  const edge1 = graph.addItem('edge', { source: 'node1', target: 'node3' });
+  it('default configs', () => {
+    graph.addBehaviors(['brush-select'], 'default');
+    graph.emit('keydown', { x: 20, y: 20, key: 'shift' });
+    graph.emit('dragstart', { x: 20, y: 20 });
+    graph.emit('drag', { x: 120, y: 120 });
+    // 只选中一个节点，没有边被选中
+    graph.emit('dragend', { canvasX: 120, canvasY: 120, x: 120, y: 120 });
+    let selectedNodes = graph.findAllByState('node', 'selected');
+    expect(selectedNodes.length).toEqual(1);
+    expect(selectedNodes[0] === node1).toBe(true);
 
-  afterEach(() => {
-    div.remove(); 
+    let selectedEdges = graph.findAllByState('edge', 'selected');
+    expect(selectedEdges.length).toEqual(0);
+
+    // 选中两个节点，一条边
+    graph.emit('keydown', { x: 20, y: 20 });
+    graph.emit('dragstart', { x: 20, y: 20 });
+    graph.emit('dragend', { canvasX: 120, canvasY: 160, x: 120, y: 160 });
+
+    selectedNodes = graph.findAllByState('node', 'selected');
+    expect(selectedNodes.length).toEqual(2);
+    expect(selectedNodes[1] === node3).toBe(true);
+
+    selectedEdges = graph.findAllByState('edge', 'selected');
+    expect(selectedEdges.length).toEqual(1);
+    expect(selectedEdges[0] === edge1).toBe(true);
+
+    graph.emit('canvas:click');
+    selectedNodes = graph.findAllByState('node', 'selected');
+    expect(selectedNodes.length).toEqual(0);
+
+    afterEach(() => {
+      div.remove();
+    });
+    graph.translate(200, 200);
+    graph.emit('keydown', { x: 20, y: 20, key: 'abc' }); // invalid key
+    graph.emit('dragstart', { x: 20, y: 20 });
+    graph.emit('drag', { x: 120, y: 120 });
+    graph.emit('keyup', { key: 'shift' });
+    graph.emit('dragend', { x: 120, y: 120, x: -80, y: -80 });
+    selectedNodes = graph.findAllByState('node', 'selected');
+    expect(selectedNodes.length).toEqual(0);
+
+    graph.emit('keydown', { x: 20, y: 20, key: 'shift' });
+    graph.emit('dragstart', { x: 20, y: 20 });
+    graph.emit('drag', { x: 120, y: 120 });
+    graph.emit('keyup', { key: 'shift' });
+    selectedNodes = graph.findAllByState('node', 'selected');
+    expect(selectedNodes.length).toEqual(0);
   });
 
   describe('Configs', () => {
@@ -45,7 +96,7 @@ describe('brush-select', () => {
     });
 
     afterEach(() => {
-      graph.destroy(); 
+      graph.destroy();
     });
 
     it('default configs', () => {
@@ -135,6 +186,7 @@ describe('brush-select', () => {
       selectedNodes = graph.findAllByState('node', 'customState');
       expect(selectedNodes.length).toEqual(0);
       expect(triggered).toBe(true);
+      graph.destroy();
     });
   });
 
@@ -193,9 +245,9 @@ describe('brush-select', () => {
     });
     graph2.paint();
 
-    graph2.emit('keydown', { canvasX: 50, canvasY: 50, key: 'shift' });
-    graph2.emit('dragstart', { canvasX: 50, canvasY: 50, item: node });
-    graph2.emit('drag', { canvasX: 100, canvasY: 100 });
+    graph2.emit('keydown', { x: 50, y: 50, key: 'shift' });
+    graph2.emit('dragstart', { x: 50, y: 50, item: node });
+    graph2.emit('drag', { x: 100, y: 100 });
     graph2.emit('dragend', { canvasX: 100, canvasY: 100, x: 100, y: 100 });
     const selectedNodes = graph2.findAllByState('node', 'selected');
     expect(selectedNodes.length).toEqual(0);
@@ -300,7 +352,6 @@ describe('brush-select', () => {
 
         doDragSelection();
       });
-
     });
 
     describe('when true', () => {
@@ -362,4 +413,5 @@ describe('brush-select', () => {
       });
     });
   });
+
 });
