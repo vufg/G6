@@ -197,9 +197,7 @@ export default {
             const childrenLength = children.length;
             for (let c = 0; c < childrenLength; c++) {
               const shape = children[c];
-              console.log('set ori', shape.get('name'), shape.destroyed, shape.get('isKeyShape'))
               if (!shape.destoryed && !shape.get('isKeyShape')) {
-                console.log('set visible', shape.get('ori-visibility'), shape.get('visible'))
                 shape.set('ori-visibility', shape.get('ori-visibility') || shape.get('visible'));
                 shape.hide();
               }
@@ -225,7 +223,6 @@ export default {
       const timeout = setTimeout(() => {
         const currentZoom = graph.getZoom();
         const curOptimized = this.get('optimized');
-        console.log('timeout', curOptimized, currentZoom, optimizeZoom)
         if (curOptimized) {
           this.set('optimized', false);
           for (let n = 0; n < nodesLength; n++) {
