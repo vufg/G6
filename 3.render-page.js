@@ -2,9 +2,9 @@ exports.ids = [3];
 exports.modules = {
 
 /***/ "../../node_modules/monaco-editor/esm/vs/basic-languages/javascript/javascript.js":
-/*!******************************************************************************************************************!*\
-  !*** /Users/pomelo/Desktop/github/G6/node_modules/monaco-editor/esm/vs/basic-languages/javascript/javascript.js ***!
-  \******************************************************************************************************************/
+/*!***************************************************************************************************************!*\
+  !*** /Users/shiwu/code/G6-2022/G6/node_modules/monaco-editor/esm/vs/basic-languages/javascript/javascript.js ***!
+  \***************************************************************************************************************/
 /*! exports provided: conf, language */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -88,9 +88,9 @@ var language = {
 /***/ }),
 
 /***/ "../../node_modules/monaco-editor/esm/vs/basic-languages/typescript/typescript.js":
-/*!******************************************************************************************************************!*\
-  !*** /Users/pomelo/Desktop/github/G6/node_modules/monaco-editor/esm/vs/basic-languages/typescript/typescript.js ***!
-  \******************************************************************************************************************/
+/*!***************************************************************************************************************!*\
+  !*** /Users/shiwu/code/G6-2022/G6/node_modules/monaco-editor/esm/vs/basic-languages/typescript/typescript.js ***!
+  \***************************************************************************************************************/
 /*! exports provided: conf, language */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 

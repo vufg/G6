@@ -2,9 +2,9 @@ exports.ids = [2];
 exports.modules = {
 
 /***/ "../../node_modules/monaco-editor/esm/vs/language/typescript/languageFeatures.js":
-/*!*****************************************************************************************************************!*\
-  !*** /Users/pomelo/Desktop/github/G6/node_modules/monaco-editor/esm/vs/language/typescript/languageFeatures.js ***!
-  \*****************************************************************************************************************/
+/*!**************************************************************************************************************!*\
+  !*** /Users/shiwu/code/G6-2022/G6/node_modules/monaco-editor/esm/vs/language/typescript/languageFeatures.js ***!
+  \**************************************************************************************************************/
 /*! exports provided: flattenDiagnosticMessageText, Adapter, LibFiles, DiagnosticsAdapter, SuggestAdapter, SignatureHelpAdapter, QuickInfoAdapter, OccurrencesAdapter, DefinitionAdapter, ReferenceAdapter, OutlineAdapter, Kind, FormatHelper, FormatAdapter, FormatOnTypeAdapter, CodeActionAdaptor, RenameAdapter, InlayHintsAdapter */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -1337,9 +1337,9 @@ var InlayHintsAdapter = /** @class */ (function (_super) {
 /***/ }),
 
 /***/ "../../node_modules/monaco-editor/esm/vs/language/typescript/lib/lib.index.js":
-/*!**************************************************************************************************************!*\
-  !*** /Users/pomelo/Desktop/github/G6/node_modules/monaco-editor/esm/vs/language/typescript/lib/lib.index.js ***!
-  \**************************************************************************************************************/
+/*!***********************************************************************************************************!*\
+  !*** /Users/shiwu/code/G6-2022/G6/node_modules/monaco-editor/esm/vs/language/typescript/lib/lib.index.js ***!
+  \***********************************************************************************************************/
 /*! exports provided: libFileSet */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -1421,9 +1421,9 @@ libFileSet['lib.webworker.iterable.d.ts'] = true;
 /***/ }),
 
 /***/ "../../node_modules/monaco-editor/esm/vs/language/typescript/tsMode.js":
-/*!*******************************************************************************************************!*\
-  !*** /Users/pomelo/Desktop/github/G6/node_modules/monaco-editor/esm/vs/language/typescript/tsMode.js ***!
-  \*******************************************************************************************************/
+/*!****************************************************************************************************!*\
+  !*** /Users/shiwu/code/G6-2022/G6/node_modules/monaco-editor/esm/vs/language/typescript/tsMode.js ***!
+  \****************************************************************************************************/
 /*! exports provided: setupTypeScript, setupJavaScript, getJavaScriptWorker, getTypeScriptWorker */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
@@ -1498,9 +1498,9 @@ function setupMode(defaults, modeId) {
 /***/ }),
 
 /***/ "../../node_modules/monaco-editor/esm/vs/language/typescript/workerManager.js":
-/*!**************************************************************************************************************!*\
-  !*** /Users/pomelo/Desktop/github/G6/node_modules/monaco-editor/esm/vs/language/typescript/workerManager.js ***!
-  \**************************************************************************************************************/
+/*!***********************************************************************************************************!*\
+  !*** /Users/shiwu/code/G6-2022/G6/node_modules/monaco-editor/esm/vs/language/typescript/workerManager.js ***!
+  \***********************************************************************************************************/
 /*! exports provided: WorkerManager */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
