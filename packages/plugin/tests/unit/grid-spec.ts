@@ -55,11 +55,11 @@ describe('grid', () => {
     expect(gridContainer.style.top).toEqual('-1.2e+06px'); // -height / 2
 
     graph.zoom(0.5);
-    expect(gridContainer.style.transform).toEqual('matrix(0.5, 0, 0, 0.5, -50, -50)');
-    expect(gridContainer.style.left).toEqual('-1.6e+06px'); // -width . 2
-    expect(gridContainer.style.top).toEqual('-1.2e+06px'); // -height / 2
+    expect(gridContainer.style.transform).toEqual('matrix(0.5, 0, 0, 0.5, -100, -100)');
+    expect(gridContainer.style.left).toEqual(`-${width / 2}px`);
+    expect(gridContainer.style.top).toEqual(`-${height / 2}px`);
 
-    graph.get('group').resetMatrix();
+    graph.resetViewport();
 
     graph.translate(100, 100);
     expect(gridContainer.style.transform).toEqual('matrix(1, 0, 0, 1, 100, 100)');

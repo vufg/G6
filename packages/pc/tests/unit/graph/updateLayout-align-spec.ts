@@ -1,4 +1,5 @@
 import { Graph } from '../../../src';
+import { numberEqual } from '../layout/util';
 
 const div = document.createElement('div');
 div.id = 'global-spec';
@@ -49,12 +50,14 @@ describe('graph', () => {
   graph.data(data);
   graph.render();
   // graph.translate(100, 200);
-  it('grid align begin', (done) => {
+  it.only('grid align begin', (done) => {
     graph.once('afterlayout', (e) => {
       setTimeout(() => {
         const bbox = graph.getGroup().getCanvasBBox();
-        expect(bbox.x).toBe(0);
-        expect(bbox.y).toBe(0);
+        const leftTopPoint = [bbox.minX, bbox.minY];
+        const leftTopCanvas = graph.getCanvasByPoint(...leftTopPoint);
+        expect(leftTopCanvas.x).toBe(0);
+        expect(leftTopCanvas.y).toBe(0);
         done();
       }, 50);
     });
@@ -65,12 +68,14 @@ describe('graph', () => {
       'begin',
     );
   });
-  it('dagre align center', (done) => {
+  it.only('dagre align center', (done) => {
     graph.once('afterlayout', (e) => {
       setTimeout(() => {
         const bbox = graph.getGroup().getCanvasBBox();
-        expect(bbox.x).toBe(206.43401336669922);
-        expect(bbox.y).toBe(49.5);
+        const centerPoint = [(bbox.minX + bbox.maxX) / 2, (bbox.minY + bbox.maxY) / 2];
+        const centerCanvas = graph.getCanvasByPoint(...centerPoint);
+        expect(numberEqual(centerCanvas.x, 250)).toBe(true);
+        expect(numberEqual(centerCanvas.y, 250)).toBe(true);
         done();
       }, 50);
     });
@@ -81,19 +86,14 @@ describe('graph', () => {
       'center',
     );
   });
-  it('force align center', (done) => {
+  it.only('force align center', (done) => {
     const canvasPoint = { x: 100, y: 200 }
-    const point = graph.getPointByCanvas(canvasPoint.x, canvasPoint.y)
     graph.once('afterlayout', () => {
-      const meanCenter = { x: 0, y: 0 };
-      graph.getNodes().forEach(node => {
-        meanCenter.x += node.getModel().x;
-        meanCenter.y += node.getModel().y;
-      });
-      meanCenter.x /= graph.getNodes().length;
-      meanCenter.y /= graph.getNodes().length;
-      expect(Math.abs(meanCenter.x - point.x) < 10).toBe(true);
-      expect(Math.abs(meanCenter.y - point.y) < 10).toBe(true);
+      const bbox = graph.getGroup().getCanvasBBox();
+      const graphCenterPoint = [(bbox.minX + bbox.maxX) / 2, (bbox.minY + bbox.maxY) / 2];
+      const canvasPos = graph.getCanvasByPoint(...graphCenterPoint);
+      expect(numberEqual(canvasPos.x, 100, 10)).toBe(true);
+      expect(numberEqual(canvasPos.y, 200, 10)).toBe(true);
       done();
     })
     graph.updateLayout(

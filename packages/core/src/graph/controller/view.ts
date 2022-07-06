@@ -1,5 +1,5 @@
-import { AbstractCanvas, BBox } from '@antv/g-base';
-import { Point, IGroup } from '@antv/g-base';
+// import { AbstractCanvas, Point, IGroup } from '@antv/g-base';
+import { ICanvas, Point, IGroup } from '@antv/g6-g-adapter';
 import { isNumber, isString } from '@antv/util';
 import { Item, Matrix, Padding, GraphAnimateConfig, IEdge, FitViewRules } from '../../types';
 import { formatPadding, isNaN } from '../../util/base';
@@ -33,43 +33,36 @@ export default class ViewController {
   public fitCenter(animate?: boolean, animateCfg?: GraphAnimateConfig) {
     const { graph } = this;
     const group: IGroup = graph.get('group');
-    group.resetMatrix();
     const bbox = group.getCanvasBBox();
-    if (bbox.width === 0 || bbox.height === 0) return;
-    const viewCenter = this.getViewCenter();
+    if (!bbox) return;
+    const bboxWidth = bbox.maxX - bbox.minX;
+    const bboxHeight = bbox.maxY - bbox.minY;
+    if (bboxWidth === 0 || bboxHeight === 0) return;
     const groupCenter: Point = {
-      x: bbox.x + bbox.width / 2,
-      y: bbox.y + bbox.height / 2,
-    };
-
-    graph.translate(viewCenter.x - groupCenter.x, viewCenter.y - groupCenter.y, animate, animateCfg);
+      x: (bbox.maxX + bbox.minX) / 2,
+      y: (bbox.maxY + bbox.minY) / 2
+    }
+    this.focusPoint(groupCenter, animate, animateCfg);
   }
 
-  private animatedFitView(group: IGroup, startMatrix: number[], animateCfg: GraphAnimateConfig, bbox: BBox, viewCenter: Point, groupCenter: Point,
-    ratio: number, zoomToFit: boolean): void {
+  private animatedFitView(
+    animateCfg: GraphAnimateConfig,
+    viewCenter: Point,
+    groupCenter: Point,
+    ratio: number,
+    zoomToFit: boolean
+  ): void {
     const { graph } = this;
     animateCfg = animateCfg ? animateCfg : { duration: 500, easing: 'easeCubic' };
 
-    // start from the default matrix
-    const matrix = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-
     // Translate
-    const vx = bbox.x + viewCenter.x - groupCenter.x - bbox.minX;
-    const vy = bbox.y + viewCenter.y - groupCenter.y - bbox.minY;
+    const vx = viewCenter.x - groupCenter.x;
+    const vy = viewCenter.y - groupCenter.y;
     if (isNaN(vx) || isNaN(vy)) return;
-    const translatedMatrix = transform(matrix, [['t', vx, vy]]);
 
     if (!zoomToFit) {
       // If zooming is not needed just animate the current translated matrix and return
-      const animationConfig = getAnimateCfgWithCallback({
-        animateCfg,
-        callback: () => {
-          graph.emit('viewportchange', { action: 'translate', matrix: translatedMatrix });
-        }
-      });
-      group.animate((ratio: number) => {
-        return { matrix: lerpArray(startMatrix, translatedMatrix, ratio) };
-      }, animationConfig);
+      graph.translate(vx, vy, true, animateCfg);
       return;
     }
 
@@ -85,26 +78,17 @@ export default class ViewController {
       realRatio = maxZoom;
       console.warn('fitview failed, ratio out of range, ratio: %f', ratio, 'graph maxzoom has been used instead');
     }
-    let zoomedMatrix = transform(translatedMatrix, [
-      ['t', -viewCenter.x, -viewCenter.y],
-      ['s', realRatio, realRatio],
-      ['t', viewCenter.x, viewCenter.y],
-    ]);
 
     // Animation
     const animationConfig = getAnimateCfgWithCallback({
       animateCfg,
       callback: () => {
-        group.setMatrix(zoomedMatrix);
-        graph.emit('viewportchange', { action: 'translate', matrix: translatedMatrix });
-        graph.emit('viewportchange', { action: 'zoom', matrix: zoomedMatrix });
+        const zoomCenter = graph.get('canvas').getCamera().getPosition();
+        graph.zoom(ratio, { x: zoomCenter[0], y: zoomCenter[1] }, true, animateCfg);
+        animateCfg?.callback?.();
       }
     });
-    group.stopAnimate();
-    group.setMatrix(startMatrix);
-    group.animate((ratio: number) => {
-      return { matrix: lerpArray(startMatrix, zoomedMatrix, ratio) };
-    }, animationConfig);
+    graph.translate(viewCenter.x - groupCenter.x, viewCenter.y - groupCenter.y, true, animationConfig);
   }
 
   // fit view graph
@@ -114,11 +98,9 @@ export default class ViewController {
     const width: number = graph.get('width');
     const height: number = graph.get('height');
     const group: IGroup = graph.get('group');
-    const startMatrix = group.getMatrix() || [1, 0, 0, 0, 1, 0, 0, 0, 1];
-    group.resetMatrix();
     const bbox = group.getCanvasBBox();
 
-    if (bbox.width === 0 || bbox.height === 0) return;
+    if (!bbox || bbox.width === 0 || bbox.height === 0) return;
     const viewCenter = this.getViewCenter();
 
     const groupCenter: Point = {
@@ -126,25 +108,27 @@ export default class ViewController {
       y: bbox.y + bbox.height / 2,
     };
 
-    // Compute ratio
-    const w = (width - padding[1] - padding[3]) / bbox.width;
-    const h = (height - padding[0] - padding[2]) / bbox.height;
-    let ratio = w;
-    if (w > h) {
-      ratio = h;
+    const bboxWidth = bbox.maxX - bbox.minX
+    const bboxHeight = bbox.maxY - bbox.minY;
+    const viewLeftTop = [padding[3], padding[0]];
+    const viewRightBottom = [width - padding[1], height - padding[2]];
+    const viewLeftTopToGlobal = graph.getPointByCanvas(viewLeftTop[0], viewLeftTop[1]);
+    const viewRightBottomToGlobal = graph.getPointByCanvas(viewRightBottom[0], viewRightBottom[1]);
+
+    const targetWidth = viewRightBottomToGlobal.x - viewLeftTopToGlobal.x;
+    const targetHeight = viewRightBottomToGlobal.y - viewLeftTopToGlobal.y;
+    const ratio = Math.min(targetWidth / bboxWidth, targetHeight / bboxHeight);
+
+
+    let animateConfig = animateCfg;
+    if (animate) {
+      this.animatedFitView(animateCfg, viewCenter, groupCenter, ratio, true);
+      return;
     }
 
-    if (animate) {
-      this.animatedFitView(group, startMatrix, animateCfg, bbox, viewCenter, groupCenter, ratio, true);
-    } else {
-      const dx = viewCenter.x - groupCenter.x;
-      const dy = viewCenter.y - groupCenter.y;
-      if (isNaN(dx) || isNaN(dy)) return;
-      graph.translate(dx, dy);
-
-      if (!graph.zoom(ratio, viewCenter)) {
-        console.warn('zoom failed, ratio out of range, ratio: %f', ratio);
-      }
+    graph.translate(viewCenter.x - groupCenter.x, viewCenter.y - groupCenter.y);
+    if (!graph.zoom(ratio, viewCenter)) {
+      console.warn('zoom failed, ratio out of range, ratio: %f', ratio);
     }
   }
 
@@ -160,21 +144,17 @@ export default class ViewController {
     const width: number = graph.get('width');
     const height: number = graph.get('height');
     const group: IGroup = graph.get('group');
-    const startMatrix = group.getMatrix() || [1, 0, 0, 0, 1, 0, 0, 0, 1];
-    group.resetMatrix();
     const bbox = group.getCanvasBBox();
 
     if (bbox.width === 0 || bbox.height === 0) return;
     const viewCenter = this.getViewCenter();
+    const centerPoint = graph.get('canvas').getPointByCanvas(viewCenter.x, viewCenter.y);
 
-    const groupCenter: Point = {
-      x: bbox.x + bbox.width / 2,
-      y: bbox.y + bbox.height / 2,
-    };
+    this.fitCenter(animate, animateCfg);
 
-    // Compute ratio
-    const wRatio = (width - padding[1] - padding[3]) / bbox.width;
-    const hRatio = (height - padding[0] - padding[2]) / bbox.height;
+    const currentZoom = graph.getZoom();
+    const wRatio = (width - padding[1] - padding[3]) / (bbox.width * currentZoom);
+    const hRatio = (height - padding[0] - padding[2]) / (bbox.height * currentZoom);
     let ratio;
     if (direction === 'x') {
       ratio = wRatio;
@@ -189,21 +169,14 @@ export default class ViewController {
       ratio = ratio < 1 ? ratio : 1;
     }
 
-    if (animate) {
-      this.animatedFitView(group, startMatrix, animateCfg, bbox, viewCenter, groupCenter, ratio, true);
-    } else {
-      const initZoomRatio = graph.getZoom();
-      let endZoom = initZoomRatio * ratio;
-      const minZoom = graph.get('minZoom');
-      // 如果zoom小于最小zoom, 则以最小zoom为准
-      if (endZoom < minZoom) {
-        endZoom = minZoom;
-        console.warn('fitview failed, ratio out of range, ratio: %f', ratio, 'graph minzoom has been used instead');
-      }
-      graph.translate(viewCenter.x - groupCenter.x, viewCenter.y - groupCenter.y);
-
-      graph.zoomTo(endZoom, viewCenter);
+    let endZoom = currentZoom * ratio;
+    const minZoom = graph.get('minZoom');
+    // 如果zoom小于最小zoom, 则以最小zoom为准
+    if (endZoom < minZoom) {
+      endZoom = minZoom;
+      console.warn('fitview failed, ratio out of range, ratio: %f', ratio, 'graph minzoom has been used instead');
     }
+    graph.zoomTo(endZoom, centerPoint, animate, animateCfg);
   }
 
   public getFormatPadding(): number[] {
@@ -214,48 +187,31 @@ export default class ViewController {
   public focusPoint(point: Point, animate?: boolean, animateCfg?: GraphAnimateConfig) {
     const viewCenter = this.getViewCenter();
     const modelCenter = this.getPointByCanvas(viewCenter.x, viewCenter.y);
-    let viewportMatrix: Matrix = this.graph.get('group').getMatrix();
-    if (!viewportMatrix) viewportMatrix = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-    if (animate) {
-      const dx = (modelCenter.x - point.x) * viewportMatrix[0];
-      const dy = (modelCenter.y - point.y) * viewportMatrix[4];
-      let lastX = 0;
-      let lastY = 0;
-      let newX = 0;
-      let newY = 0;
-      // 动画每次平移一点，直到目标位置
-      this.graph.get('canvas').animate(
-        (ratio) => {
-          newX = dx * ratio;
-          newY = dy * ratio;
-          this.graph.translate(newX - lastX, newY - lastY);
-          lastX = newX;
-          lastY = newY;
-        },
-        {
-          ...animateCfg,
-        },
-      );
-    } else {
-      this.graph.translate(
-        (modelCenter.x - point.x) * viewportMatrix[0],
-        (modelCenter.y - point.y) * viewportMatrix[4],
-      );
-    }
+
+    this.graph.translate(
+      (modelCenter.x - point.x),
+      (modelCenter.y - point.y),
+      animate,
+      animateCfg
+    );
   }
 
   /**
-   * 将 Canvas 坐标转成视口坐标
+   * 将 Canvas 坐标转成绘制坐标
    * @param canvasX canvas x 坐标
    * @param canvasY canvas y 坐标
    */
   public getPointByCanvas(canvasX: number, canvasY: number): Point {
-    let viewportMatrix: Matrix = this.graph.get('group').getMatrix();
-    if (!viewportMatrix) {
-      viewportMatrix = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-    }
-    const point = invertMatrix({ x: canvasX, y: canvasY }, viewportMatrix);
-    return point;
+    return this.graph.get('canvas').getPointByCanvas(canvasX, canvasY);
+  }
+
+  /**
+   * 将绘制坐标转成 Canvas 坐标
+   * @param x 视口 x 坐标
+   * @param y 视口 y 坐标
+   */
+  public getCanvasByPoint(x: number, y: number): Point {
+    return this.graph.get('canvas').getCanvasByPoint(x, y);
   }
 
   /**
@@ -264,9 +220,8 @@ export default class ViewController {
    * @param clientY 页面 y 坐标
    */
   public getPointByClient(clientX: number, clientY: number): Point {
-    const canvas: AbstractCanvas = this.graph.get('canvas');
-    const canvasPoint: Point = canvas.getPointByClient(clientX, clientY);
-    return this.getPointByCanvas(canvasPoint.x, canvasPoint.y);
+    const canvas: ICanvas = this.graph.get('canvas');
+    return canvas.getPointByClient(clientX, clientY);
   }
 
   /**
@@ -275,25 +230,13 @@ export default class ViewController {
    * @param y 视口 y 坐标
    */
   public getClientByPoint(x: number, y: number): Point {
-    const canvas: AbstractCanvas = this.graph.get('canvas');
+    const canvas: ICanvas = this.graph.get('canvas');
     const canvasPoint = this.getCanvasByPoint(x, y);
     const point = canvas.getClientByPoint(canvasPoint.x, canvasPoint.y);
 
     return { x: point.x, y: point.y };
   }
 
-  /**
-   * 将视口坐标转成 Canvas 坐标
-   * @param x 视口 x 坐标
-   * @param y 视口 y 坐标
-   */
-  public getCanvasByPoint(x: number, y: number): Point {
-    let viewportMatrix: Matrix = this.graph.get('group').getMatrix();
-    if (!viewportMatrix) {
-      viewportMatrix = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-    }
-    return applyMatrix({ x, y }, viewportMatrix);
-  }
 
   /**
    * 将元素移动到画布中心
@@ -321,8 +264,7 @@ export default class ViewController {
         }
       } else {
         const group: IGroup = item.get('group');
-        let matrix: Matrix = group.getMatrix();
-        if (!matrix) matrix = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+        const matrix: Matrix = group.getMatrix() || [1, 0, 0, 0, 1, 0, 0, 0, 1];
         x = matrix[6];
         y = matrix[7];
       }
@@ -340,9 +282,6 @@ export default class ViewController {
     const padding = this.getFormatPadding();
     const width: number = graph.get('width');
     const height: number = graph.get('height');
-    const group: IGroup = graph.get('group');
-    const startMatrix = group.getMatrix() || [1, 0, 0, 0, 1, 0, 0, 0, 1];
-    group.resetMatrix();
 
     let bbox: BBox = {
       x: 0, y: 0,
@@ -387,10 +326,10 @@ export default class ViewController {
     }
 
     if (animate) {
-      this.animatedFitView(group, startMatrix, animateCfg, bbox, viewCenter, groupCenter, ratio, zoomToFit);
+      this.animatedFitView(animateCfg, viewCenter, groupCenter, ratio, zoomToFit);
+      return;
     } else {
       graph.translate(viewCenter.x - groupCenter.x, viewCenter.y - groupCenter.y);
-
       if (zoomToFit && !graph.zoom(ratio, viewCenter)) {
         console.warn('zoom failed, ratio out of range, ratio: %f', ratio);
       }
@@ -409,7 +348,7 @@ export default class ViewController {
     }
 
     graph.set({ width, height });
-    const canvas: AbstractCanvas = graph.get('canvas');
+    const canvas: ICanvas = graph.get('canvas');
     canvas.changeSize(width, height);
 
     // change the size of grid plugin if it exists on graph

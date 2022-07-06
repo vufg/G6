@@ -1,6 +1,5 @@
 import EventEmitter from '@antv/event-emitter';
-import { ICanvas, IGroup, Point } from '@antv/g-base';
-import { ext } from '@antv/matrix-util';
+import { ICanvas, IGroup, Point } from '@antv/g6-g-adapter';
 import { clone, deepMix, each, isPlainObject, isString, debounce } from '@antv/util';
 import {
   getDegree,
@@ -33,14 +32,13 @@ import {
   FitViewRules,
   G6Event,
 } from '../types';
-import { lerp, move } from '../util/math';
+import { getCameraMatrix, moveCamera } from '../util/math';
 import { dataValidation, singleDataValidation } from '../util/validation';
 import Global from '../global';
 import { ItemController, ModeController, StateController, ViewController } from './controller';
 import { plainCombosToTrees, traverseTree, reconstructTree, traverseTreeUp, getAnimateCfgWithCallback } from '../util/graphic';
 import Hull from '../item/hull';
 
-const { transform } = ext;
 const NODE = 'node';
 
 export interface PrivateGraphOption extends GraphOptions {
@@ -148,12 +146,17 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
     const el: HTMLElement = canvas.get('el');
     const { id = 'g6' } = el || {};
 
-    const group: IGroup = canvas.addGroup({
-      id: `${id}-root`,
-      className: Global.rootContainerClassName,
-    });
+    const group: IGroup = canvas.getGroup();
+    group.set('className', Global.rootContainerClassName);
 
     if (this.get('groupByTypes')) {
+      // 用于存储自定义的群组
+      const comboGroup: IGroup = group.addGroup({
+        id: `${id}-combo`,
+        className: Global.comboContainerClassName,
+      });
+      comboGroup.toBack();
+
       const edgeGroup: IGroup = group.addGroup({
         id: `${id}-edge`,
         className: Global.edgeContainerClassName,
@@ -163,13 +166,6 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
         id: `${id}-node`,
         className: Global.nodeContainerClassName,
       });
-      const comboGroup: IGroup = group.addGroup({
-        id: `${id}-combo`,
-        className: Global.comboContainerClassName,
-      });
-
-      // 用于存储自定义的群组
-      comboGroup.toBack();
 
       this.set({ nodeGroup, edgeGroup, comboGroup });
     }
@@ -569,53 +565,45 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
    * @param {GraphAnimateConfig} animateCfg 若带有动画，动画的配置项
    */
   public translate(dx: number, dy: number, animate?: boolean, animateCfg?: GraphAnimateConfig): void {
-    const group: IGroup = this.get('group');
-
-    let matrix = clone(group.getMatrix());
-    if (!matrix) {
-      matrix = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-    }
-    if (animate) {
-      const animateConfig = getAnimateCfgWithCallback({
-        animateCfg,
-        callback: () => this.emit('viewportchange', { action: 'translate', matrix: group.getMatrix() })
-      });
-
-      move(group, {
-        x: group.getCanvasBBox().x + dx,
-        y: group.getCanvasBBox().y + dy
-      }, animate, animateConfig || {
-        duration: 500,
-        easing: 'easeCubic'
-      });
-    } else {
-      matrix = transform(matrix, [['t', dx, dy]]);
-      group.setMatrix(matrix);
-
-      this.emit('viewportchange', { action: 'translate', matrix });
+    const camera = this.get('canvas').getCamera();
+    const callback = () => {
+      this.emit('viewportchange', { action: 'translate', matrix: getCameraMatrix(camera) });
       this.autoPaint();
     }
+    moveCamera(
+      this.get('canvas'),
+      { x: -dx, y: -dy },
+      callback,
+      animate,
+      animateCfg
+    );
   }
 
   /**
-   * 平移画布到某点
-   * @param {number} x 水平坐标
-   * @param {number} y 垂直坐标
+   * 平移图内容中心到某点
+   * @param {number} x 水平坐标（相对于 Canvas DOM）
+   * @param {number} y 垂直坐标（相对于 Canvas DOM）
    * @param {boolean} animate 是否带有动画地移动
    * @param {GraphAnimateConfig} animateCfg 若带有动画，动画的配置项
    */
   public moveTo(x: number, y: number, animate?: boolean, animateCfg?: GraphAnimateConfig): void {
     const group: IGroup = this.get('group');
-    move(
-      group,
-      { x, y },
+    const targetPoint = this.getPointByCanvas(x, y);
+    const bbox = group.getCanvasBBox();
+    const groupCenter = { x: (bbox.maxX + bbox.minX) / 2, y: (bbox.maxY + bbox.minY) / 2 };
+    const dx = targetPoint.x - groupCenter.x;
+    const dy = targetPoint.y - groupCenter.y;
+
+    const camera = this.get('canvas').getCamera();
+    const callback = () => this.emit('viewportchange', { action: 'translate', matrix: getCameraMatrix(camera) })
+
+    moveCamera(
+      this.get('canvas'),
+      { x: -dx, y: -dy },
+      callback,
       animate,
-      animateCfg || {
-        duration: 500,
-        easing: 'easeCubic',
-      }
+      animateCfg,
     );
-    this.emit('viewportchange', { action: 'move', matrix: group.getMatrix() });
   }
 
   /**
@@ -631,12 +619,8 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
     }
 
     const viewController: ViewController = this.get('viewController');
-
-    if (rules) {
-      viewController.fitViewByRules(rules, animate, animateCfg);
-    } else {
-      viewController.fitView(animate, animateCfg);
-    }
+    if (rules) viewController.fitViewByRules(rules, animate, animateCfg);
+    else viewController.fitView(animate, animateCfg);
 
     this.autoPaint();
   }
@@ -702,69 +686,62 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
    * @param {GraphAnimateConfig} animateCfg 若带有动画，动画的配置项
    * @return {boolean} 缩放是否成功
    */
-  public zoom(ratio: number, center?: Point, animate?: boolean, animateCfg?: GraphAnimateConfig): boolean {
+  public zoom(ratio: number, center: Point = { x: 0, y: 0 }, animate?: boolean, animateCfg: GraphAnimateConfig = {}): boolean {
+    if (ratio === 1 || !ratio) return;
+
     const group: IGroup = this.get('group');
-    let matrix = clone(group.getMatrix()) || [1, 0, 0, 0, 1, 0, 0, 0, 1];
+    const canvas = this.get('canvas');
+    const camera = canvas.getCamera();
+    const currentZoom = camera.getZoom();
+    const targetRatio = ratio * (currentZoom || 1);
+
     const minZoom: number = this.get('minZoom');
     const maxZoom: number = this.get('maxZoom');
-    const currentZoom = this.getZoom() || 1;
-    const targetZoom = currentZoom * ratio;
-    let finalRatio = ratio;
-
-    let failed = false;
-    if (minZoom && targetZoom < minZoom) {
-      finalRatio = minZoom / currentZoom;
-      failed = true;
-    } else if (maxZoom && targetZoom > maxZoom) {
-      finalRatio = maxZoom / currentZoom;
-      failed = true;
+    if ((minZoom && targetRatio < minZoom) || (maxZoom && targetRatio > maxZoom)) {
+      return false;
     }
 
-    if (center) {
-      matrix = transform(matrix, [
-        ['t', -center.x, -center.y],
-        ['s', finalRatio, finalRatio],
-        ['t', center.x, center.y],
-      ]);
-    } else {
-      matrix = transform(matrix, [['s', finalRatio, finalRatio]]);
+    // 一次缩放需要执行的逻辑，方便动画多次调用或无动画时一次性调用
+    const zoomOnce = (targetRatioOnce) => {
+      // 在变换之前先固化当前中心为视口坐标
+      const centerPortPoint = canvas.getCanvasByPoint(center.x, center.y);
+      camera.setPosition(center.x, center.y);
+      camera.setFocalPoint(center.x, center.y);
+      // 缩放
+      camera.setZoom(targetRatioOnce);
+      // 将之前固化的视口坐标再转换为当前情况下的画布（绘制）坐标
+      const centerGlobalPoint = canvas.getPointByCanvas(centerPortPoint.x, centerPortPoint.y);
+      const currentCameraPosition = camera.getPosition();
+      const targetPosition = [
+        currentCameraPosition[0] - (centerGlobalPoint.x - center.x),
+        currentCameraPosition[1] - (centerGlobalPoint.y - center.y)
+      ];
+      camera.setPosition(...targetPosition);
+      camera.setFocalPoint(...targetPosition);
     }
 
+    // 带动画/不带动画地缩放
     if (animate) {
-      // Clone the original matrix to perform the animation
-      let aniMatrix = clone(group.getMatrix());
-      if (!aniMatrix) {
-        aniMatrix = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-      }
-      const initialRatio = aniMatrix[0];
-      const targetRatio = initialRatio * finalRatio;
-
-      const animateConfig = getAnimateCfgWithCallback({
-        animateCfg,
-        callback: () => this.emit('viewportchange', { action: 'zoom', matrix: group.getMatrix() })
-      });
-
-      group.animate((ratio: number) => {
-        if (ratio === 1) {
-          // Reuse the first transformation
-          aniMatrix = matrix;
-        } else {
-          const scale = lerp(initialRatio, targetRatio, ratio) / aniMatrix[0];
-          if (center) {
-            aniMatrix = transform(aniMatrix, [['t', -center.x, -center.y], ['s', scale, scale], ['t', center.x, center.y]]);
-          } else {
-            aniMatrix = transform(aniMatrix, [['s', scale, scale]]);
-          }
+      const animateConfig = animateCfg || this.get('animateCfg');
+      const ratioDiff = targetRatio - currentZoom;
+      canvas.animate(r => {
+        zoomOnce(currentZoom + ratioDiff * r);
+      }, {
+        ...animateConfig,
+        callback: () => {
+          animateConfig.callback?.();
+          // TODO: matrix 的处理
+          this.emit('viewportchange', { action: 'zoom', matrix: getCameraMatrix(camera) });
+          this.autoPaint();
         }
-        return { matrix: aniMatrix };
-      }, animateConfig);
+      });
     } else {
-      group.setMatrix(matrix);
-      this.emit('viewportchange', { action: 'zoom', matrix });
+      zoomOnce(targetRatio);
+      // TODO: matrix 的处理
+      this.emit('viewportchange', { action: 'zoom', matrix: getCameraMatrix(camera) });
       this.autoPaint();
     }
-
-    return !failed;
+    return true;
   }
 
   /**
@@ -972,13 +949,12 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
 
   /**
    * 设置是否在更新/刷新后自动重绘
+   * TODO: 是否废弃
    * @param {boolean} auto 自动重绘
    */
   public setAutoPaint(auto: boolean): void {
     const self = this;
     self.set('autoPaint', auto);
-    const canvas: ICanvas = self.get('canvas');
-    canvas.set('autoDraw', auto);
   }
 
   /**
@@ -1591,7 +1567,6 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
             y: containerMatrix[7],
           });
         }
-
         self.updateItem(item, model, false);
       } else {
         item = self.addItem(type, model, false) as any;
@@ -1627,10 +1602,6 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
     // 更改数据源后，取消所有状态
     this.getNodes().map(node => self.clearItemStates(node));
     this.getEdges().map(edge => self.clearItemStates(edge));
-
-    const canvas: ICanvas = this.get('canvas');
-    const localRefresh: boolean = canvas.get('localRefresh');
-    canvas.set('localRefresh', false);
 
     if (!self.get('data')) {
       self.data(data);
@@ -1710,6 +1681,7 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
     this.set({ nodes: items.nodes, edges: items.edges });
 
     const layoutController = this.get('layoutController');
+    if (self.get('animate')) self.positionsAnimate();
     if (layoutController) {
       layoutController.changeData(() => {
         setTimeout(() => {
@@ -1727,10 +1699,6 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
         self.autoPaint();
       }
     }
-
-    setTimeout(() => {
-      canvas.set('localRefresh', localRefresh);
-    }, 16);
     this.emit('afterchangedata');
     return this;
   }
@@ -2251,11 +2219,8 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
 
     const toNodes = nodes.map(node => {
       const model = node.getModel();
-      return {
-        id: model.id,
-        x: model.x,
-        y: model.y,
-      };
+      const { id, x, y } = model;
+      return { id, x, y };
     });
 
     self.stopAnimate();
@@ -2309,13 +2274,8 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
         duration: animateCfg.duration,
         easing: animateCfg.easing,
         callback: () => {
-          each(nodes, (node: INode) => {
-            node.set('originAttrs', null);
-          });
-
-          if (animateCfg.callback) {
-            animateCfg.callback();
-          }
+          each(nodes, (node: INode) => node.set('originAttrs', null));
+          animateCfg.callback?.();
           self.emit('afteranimate');
           self.animating = false;
         },
@@ -2403,8 +2363,7 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
    * @return {number} 比例
    */
   public getZoom(): number {
-    const matrix = this.get('group').getMatrix();
-    return matrix ? matrix[0] : 1;
+    return this.get('canvas').getCamera()?.getZoom();
   }
 
   /**
@@ -2432,14 +2391,31 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
    * @return {object} this
    */
   public clear(avoidEmit: boolean = false): AbstractGraph {
-    this.get('canvas')?.clear();
+    const canvas = this.get('canvas');
+    canvas?.clear();
 
     this.initGroups();
+
+    this.resetViewport();
 
     // 清空画布时同时清除数据
     this.set({ itemMap: {}, nodes: [], edges: [], vedges: [], groups: [], combos: [], comboTrees: [] });
     if (!avoidEmit) this.emit('afterrender');
     return this;
+  }
+
+  /**
+   * 恢复图视口变化，包括缩放、平移
+   */
+  public resetViewport() {
+    const canvas = this.get('canvas');
+    if (!canvas) return;
+    const camera = canvas.getCamera();
+    camera.setZoom(1);
+    const width = this.get('width');
+    const height = this.get('height');
+    camera.setPosition(width / 2, height / 2);
+    camera.setFocalPoint(width / 2, height / 2);
   }
 
   /**
@@ -3052,7 +3028,7 @@ export default abstract class AbstractGraph extends EventEmitter implements IAbs
    * 销毁画布
    */
   public destroy() {
-    this.clear();
+    this.clear(true);
 
     // 清空栈数据
     this.clearStack();
