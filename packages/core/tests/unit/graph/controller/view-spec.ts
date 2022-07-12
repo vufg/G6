@@ -43,7 +43,6 @@ describe('view', () => {
     graph.zoom(2, { x: 25, y: 50 })
 
     // 因为是相机移动，bbox 永远不会变化了
-    const canvas: AbstractCanvas = graph.get('canvas');
     let bbox = canvas.getCanvasBBox();
     expect(bbox.x).toBe(oriBBox.x);
     expect(bbox.y).toBe(oriBBox.y);
@@ -137,7 +136,6 @@ describe('view', () => {
 
     graph.zoom(0.1, { x: 10, y: 10 });
     centerPoint = graph.getPointByCanvas(250, 250);
-    console.log('centerPoint', centerPoint);
     expect(numberEqual(centerPoint.x, 10, 0.1)).toBe(true);
     expect(numberEqual(centerPoint.y, 10, 0.1)).toBe(true);
 

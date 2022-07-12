@@ -3,9 +3,7 @@ import { ICanvas, Point, IGroup } from '@antv/g6-g-adapter';
 import { isNumber, isString } from '@antv/util';
 import { Item, Matrix, Padding, GraphAnimateConfig, IEdge, FitViewRules } from '../../types';
 import { formatPadding, isNaN } from '../../util/base';
-import { applyMatrix, invertMatrix, lerpArray } from '../../util/math';
 import { IAbstractGraph } from '../../interface/graph';
-import { transform } from '@antv/matrix-util/lib/ext';
 import { getAnimateCfgWithCallback } from '../../util/graphic';
 
 export default class ViewController {
@@ -127,7 +125,8 @@ export default class ViewController {
     }
 
     graph.translate(viewCenter.x - groupCenter.x, viewCenter.y - groupCenter.y);
-    if (!graph.zoom(ratio, viewCenter)) {
+    const zoomCenter = graph.get('canvas').getCamera().getPosition();
+    if (!graph.zoom(ratio, { x: zoomCenter[0], y: zoomCenter[1] })) {
       console.warn('zoom failed, ratio out of range, ratio: %f', ratio);
     }
   }

@@ -273,10 +273,7 @@ export default class ItemController {
       const edges: IEdge[] = (item as INode).getEdges();
       if (updateType === 'move') {
         each(edges, (edge: IEdge) => {
-          this.edgeToBeUpdateMap[edge.getID()] = {
-            edge: edge,
-            updateType
-          };
+          this.edgeToBeUpdateMap[edge.getID()] = { edge, updateType };
           this.throttleRefresh();
         });
       } else if (updateType?.includes('bbox')) {
