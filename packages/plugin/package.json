@@ -1,6 +1,6 @@
 {
   "name": "@antv/g6-plugin",
-  "version": "0.7.8",
+  "version": "0.8.0-alpha.1",
   "description": "G6 Plugin",
   "main": "lib/index.js",
   "module": "es/index.js",
@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@antv/dom-util": "^2.0.2",
-    "@antv/g6-core": "0.7.8",
+    "@antv/g6-core": "0.8.0-alpha.1",
     "@antv/g6-g-adapter": "*",
     "@antv/matrix-util": "^3.1.0-beta.3",
     "@antv/scale": "^0.3.4",

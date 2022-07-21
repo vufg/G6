@@ -2,7 +2,7 @@ import { modifyCSS, createDom } from '@antv/dom-util';
 import { clone, isString } from '@antv/util';
 import Base, { IPluginBaseConfig } from '../base';
 import { IAbstractGraph as IGraph, ICombo } from '@antv/g6-core';
-import { Point } from '@antv/g6-g-adapter';
+import { Point } from '@antv/g-adapter';
 import insertCss from 'insert-css';
 
 const DELTA = 0.05;
