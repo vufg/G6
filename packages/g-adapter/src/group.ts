@@ -188,7 +188,8 @@ export default class Group extends EventEmitter implements IGroup {
       children.splice(index, 1);
     }
     if (!element) return;
-    element.remove(destroy);
+    element.remove();
+    if (destroy) element.destroy();
   }
 
   /**
@@ -393,7 +394,7 @@ export default class Group extends EventEmitter implements IGroup {
       this.getCanvas()
     );
     this.set('clipShape', clipShape);
-    this.adaptedEle.setClip(clipShape as any);
+    this.adaptedEle.style.clipPath = clipShape;
     return clipShape
   }
 
@@ -740,7 +741,10 @@ export default class Group extends EventEmitter implements IGroup {
    * remove the group from its parent group
    */
   public remove(destroy = true) {
-    this.adaptedEle.remove(destroy);
+    this.adaptedEle.remove();
+    if (destroy) {
+      this.adaptedEle.destroy();
+    }
     const siblings = this.get('parent').getChildren() || [];
     const idx = siblings.indexOf(this);
     if (idx > -1) {

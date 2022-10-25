@@ -13,7 +13,6 @@ import {
   decompose,
   CanvasEvent
 } from '@antv/g';
-import { Arrow as GArrow } from '@antv/g-components';
 import { ext, mat3, vec3 } from '@antv/matrix-util';
 import { unitMatrix } from './utils/matrix';
 import { attr, createClipShape, getLineTangent, getPathBySymbol, isArrowKey, isCombinedShapeSharedAttr, formatAttrValue, formatAttributes } from './utils/shape';
@@ -174,21 +173,18 @@ const handler = {
   }
 }
 
-const lineVarNames = varNames.concat(['getTotalLength', 'getPoint', 'getStartTangent', 'getEndTangent']);
+const lineVarNames = varNames.concat([]);
 const lineHandlerFunctionMap = {
   'attr': target => (param1Prop, param2) => {
-    const bodyShape = target.getBody();
     const param1 = param1Prop === 'lineAppendWidth' ? 'increasedLineWidthForHitTesting' : param1Prop;
     if (param1 === undefined) {
       // 若不存在参数，则代表取出所有 attrs
-      const bodyAttrs = target.getBody().attributes;
       const targetAttributes = { ...target.attributes };
       delete targetAttributes.body;
-      delete targetAttributes.startHead;
-      delete targetAttributes.endHead;
+      delete targetAttributes.markerStart;
+      delete targetAttributes.markerEnd;
       const attrs = {
         ...targetAttributes,
-        ...bodyAttrs,
         startArrow: target.config?.startArrow,
         endArrow: target.config?.endArrow,
       }
@@ -202,7 +198,11 @@ const lineHandlerFunctionMap = {
       // 第一个参数是 string，不存在第二个参数 -> 取出一个值
       if (param2 === undefined) {
         if (param1 === 'matrix') return target.getMatrix();
-        return (isArrowKey(param1)) ? target.config[param1] : bodyShape.style?.[param1] || target.style?.[param1];
+        if ((isArrowKey(param1))) {
+          const configArrow = target.config[param1];
+          return configArrow === null ? undefined : configArrow;
+        }
+        return target.style?.[param1] || target.style?.[param1];
       }
       // 第一个参数是 string，第二个参数存在 -> 设置一个值。成为参数对象在后面统一处理
       paramObj = { [param1]: param2 }
@@ -216,37 +216,16 @@ const lineHandlerFunctionMap = {
           target.config[key] = value;
         } else {
           target.style[key] = value;
-          bodyShape.style[key] = value;
           // 若是箭头共用样式，需要同时更新箭头
           if (isCombinedShapeSharedAttr(key)) {
-            if (target.startHead?.style) target.startHead.style[key] = value;
-            if (target.endHead?.style) target.endHead.style[key] = value;
+            if (target.markerStart?.style) target.markerStart.style[key] = value;
+            if (target.markerEnd?.style) target.markerEnd.style[key] = value;
           }
         }
       });
       return paramObj;
     }
     return;
-  },
-  'getTotalLength': target => () => target.getBody().getTotalLength(),
-  'getPoint': target => (ratio: number) => target.getBody().getPoint(ratio),
-  'getStartTangent': target => () => {
-    const bodyShape = target.getBody();
-    if (bodyShape.getStartTangent) {
-      return bodyShape.getStartTangent()
-    } else {
-      // 直线
-      return getLineTangent(bodyShape, 'start');
-    }
-  },
-  'getEndTangent': target => () => {
-    const bodyShape = target.getBody();
-    if (bodyShape.getStartTangent) {
-      return bodyShape.getEndTangent()
-    } else {
-      // 直线
-      return getLineTangent(bodyShape, 'end');
-    }
   },
 }
 const lineHandler = {
@@ -265,10 +244,8 @@ const setFunc = (shape, name, value) => {
     case 'visible':
       if (value === false) {
         shape.hide();
-        shape.getBody?.()?.hide();
       } else {
         shape.show();
-        shape.getBody?.()?.show();
       }
       break;
     case 'zIndex':
@@ -356,7 +333,7 @@ class Circle extends GCircle {
       this.get('canvas')
     );
     this.set('clipShape', clipShape);
-    super.setClip(clipShape as any);
+    this.style.clipPath = clipShape as any;
     return clipShape
   }
 
@@ -427,7 +404,7 @@ class Rect extends GRect {
       this.get('canvas')
     );
     this.set('clipShape', clipShape);
-    super.setClip(clipShape as any);
+    this.style.clipPath = clipShape as any;
     return clipShape
   }
 
@@ -498,7 +475,7 @@ class Ellipse extends GEllipse {
       this.get('canvas')
     );
     this.set('clipShape', clipShape);
-    super.setClip(clipShape as any);
+    this.style.clipPath = clipShape as any;
     return clipShape
   }
 
@@ -569,7 +546,7 @@ class Text extends GText {
       this.get('canvas')
     );
     this.set('clipShape', clipShape);
-    super.setClip(clipShape as any);
+    this.style.clipPath = clipShape as any;
     return clipShape
   }
 
@@ -599,7 +576,6 @@ class Text extends GText {
     return this;
   }
 }
-
 class Polygon extends GPolygon {
   public shapeType: string;
   constructor(cfg) {
@@ -641,7 +617,7 @@ class Polygon extends GPolygon {
       this.get('canvas')
     );
     this.set('clipShape', clipShape);
-    super.setClip(clipShape as any);
+    this.style.clipPath = clipShape as any;
     return clipShape
   }
 
@@ -671,7 +647,6 @@ class Polygon extends GPolygon {
     return this;
   }
 }
-
 class Image extends GImage {
   public shapeType: string;
   constructor(cfg) {
@@ -713,7 +688,7 @@ class Image extends GImage {
       this.get('canvas')
     );
     this.set('clipShape', clipShape);
-    super.setClip(clipShape as any);
+    this.style.clipPath = clipShape as any;
     return clipShape
   }
 
@@ -743,17 +718,20 @@ class Image extends GImage {
     return this;
   }
 }
-
 class Line extends GLine {
   public shapeType: string;
   constructor(cfg) {
-    formatAttributes(cfg.style);
-    super(cfg);
-    const proxy = new Proxy(this, handler);
-    varNames.forEach(funcName => {
+    const fmtCfg = getLineConstructCfg(cfg);
+    super(fmtCfg);
+    const proxy = new Proxy(this, lineHandler);
+    proxy.combinedShape = true;
+    lineVarNames.forEach(funcName => {
       this[funcName] = proxy[funcName];
     });
-    this.shapeType = 'simple-line';
+    const { startArrow, endArrow } = cfg?.style || {};
+    this.set('startArrow', startArrow);
+    this.set('endArrow', endArrow);
+    this.shapeType = 'line';
     return this;
   }
 
@@ -785,7 +763,7 @@ class Line extends GLine {
       this.get('canvas')
     );
     this.set('clipShape', clipShape);
-    super.setClip(clipShape as any);
+    this.style.clipPath = clipShape as any;
     return clipShape
   }
 
@@ -813,19 +791,30 @@ class Line extends GLine {
     }
     toFrontBackFunc(canvas, callSuper);
     return this;
+  }
+
+  public getStartTangent() {
+    return getLineTangent(this, 'start');
+  }
+
+  public getEndTangent() {
+    return getLineTangent(this, 'end');
   }
 }
 
 class Polyline extends GPolyline {
   public shapeType: string;
   constructor(cfg) {
-    formatAttributes(cfg.style);
-    super(cfg);
-    const proxy = new Proxy(this, handler);
-    varNames.forEach(funcName => {
+    super(getLineConstructCfg(cfg));
+    const proxy = new Proxy(this, lineHandler);
+    proxy.combinedShape = true;
+    lineVarNames.forEach(funcName => {
       this[funcName] = proxy[funcName];
     });
-    this.shapeType = 'simple-polyline';
+    const { startArrow, endArrow } = cfg?.style || {};
+    this.set('startArrow', startArrow);
+    this.set('endArrow', endArrow);
+    this.shapeType = 'polyline';
     return this;
   }
 
@@ -857,7 +846,7 @@ class Polyline extends GPolyline {
       this.get('canvas')
     );
     this.set('clipShape', clipShape);
-    super.setClip(clipShape as any);
+    this.style.clipPath = clipShape as any;
     return clipShape
   }
 
@@ -892,13 +881,16 @@ class Path extends GPath {
   constructor(cfg) {
     delete cfg.style.x;
     delete cfg.style.y;
-    formatAttributes(cfg.style);
-    super(cfg);
-    const proxy = new Proxy(this, handler);
-    varNames.forEach(funcName => {
+    super(getLineConstructCfg(cfg));
+    const proxy = new Proxy(this, lineHandler);
+    proxy.combinedShape = true;
+    lineVarNames.forEach(funcName => {
       this[funcName] = proxy[funcName];
     });
-    this.shapeType = 'simple-path';
+    const { startArrow, endArrow } = cfg?.style || {};
+    this.set('startArrow', startArrow);
+    this.set('endArrow', endArrow);
+    this.shapeType = 'path';
     return this;
   }
 
@@ -930,7 +922,7 @@ class Path extends GPath {
       this.get('canvas')
     );
     this.set('clipShape', clipShape);
-    super.setClip(clipShape as any);
+    this.style.clipPath = clipShape as any;
     return clipShape
   }
 
@@ -1010,7 +1002,7 @@ class HTML extends GHTML {
       this.get('canvas')
     );
     this.set('clipShape', clipShape);
-    super.setClip(clipShape as any);
+    this.style.clipPath = clipShape as any;
     return clipShape
   }
 
@@ -1041,7 +1033,7 @@ class HTML extends GHTML {
   }
 }
 
-const getLineConstructCfg = (cfg, Shape) => {
+const getLineConstructCfg = (cfg) => {
   const { style, ...otherCfg } = cfg;
   const { startArrow, endArrow, lineAppendWidth, d = 0, ...otherAttrs } = style;
   if (isArray(otherAttrs.path)) {
@@ -1053,220 +1045,43 @@ const getLineConstructCfg = (cfg, Shape) => {
   }
   // 分离 body 的样式和共享样式
   const sharedStyle = {};
-  const bodyStyle = {};
   Object.keys(otherAttrs).forEach(key => {
     const value = formatAttrValue(key, otherAttrs[key]);
-    if (isCombinedShapeSharedAttr(key)) {
-      sharedStyle[key] = value;
-    } else {
-      bodyStyle[key] = value;
-    }
-  })
-  const increasedLineWidthForHitTesting = lineAppendWidth || style.lineWidth || 1;
-  const body = new Shape({
-    style: {
-      ...bodyStyle,
-      increasedLineWidthForHitTesting,
-      x: 0,
-      y: 0
-    }
+    sharedStyle[key] = value;
   });
 
-  const startHead = getArrowHead(startArrow);
-  const endHead = getArrowHead(endArrow);
+  const markerStart = getArrowHead(startArrow, sharedStyle);
+  const markerEnd = getArrowHead(endArrow, sharedStyle);
 
   const offset = -2 * d;
-  const combinedStyle = {
-    body,
-    startHead,
-    endHead,
+  const finalStyle = {
+    markerStart,
+    markerEnd,
     ...sharedStyle,
-    increasedLineWidthForHitTesting,
-    startHeadOffset: offset,
-    endHeadOffset: offset,
+    increasedLineWidthForHitTesting: lineAppendWidth || style.lineWidth || 1,
+    markerStartOffset: offset,
+    markerEndOffset: offset,
     x: 0,
     y: 0
   }
   return {
-    style: combinedStyle,
+    style: finalStyle,
     ...otherCfg,
     x: 0,
     y: 0
   };
 }
 
-class LineWithArrow extends GArrow {
-  public shapeType: string;
-  constructor(cfg) {
-    super(getLineConstructCfg(cfg, Line));
-
-    const { startArrow, endArrow } = cfg?.style || {};
-
-    const proxy = new Proxy(this, lineHandler);
-    proxy.combinedShape = true;
-    // attr 和其他图形不同
-    lineVarNames.forEach(funcName => {
-      this[funcName] = proxy[funcName];
-    });
-    this.set('startArrow', startArrow);
-    this.set('endArrow', endArrow);
-    this.shapeType = 'line';
-    return this;
-  }
-
-  public set(name, value) {
-    super.set(name, value);
-    return setFunc(this, name, value);
-  }
-
-  public get(name) {
-    const superValue = super.get(name);
-    return getFunc(this, name, superValue);
-  }
-
-  // @ts-ignore
-  public animate(...args) {
-    // @ts-ignore
-    const callAnimate = (...args) => super.animate(...args);
-    // @ts-ignore
-    this.getBody().animate(...args);
-    processAnimate(args, this, callAnimate);
-    return callAnimate;
-  }
-
-  public toFront() {
-    const canvas = this.get('canvas');
-    const callSuper = () => {
-      super.toFront();
-    }
-    toFrontBackFunc(canvas, callSuper);
-    return this;
-  }
-
-  public toBack() {
-    const canvas = this.get('canvas');
-    const callSuper = () => {
-      super.toBack();
-    }
-    toFrontBackFunc(canvas, callSuper);
-    return this;
-  }
+export {
+  Circle,
+  Rect,
+  Ellipse,
+  Text,
+  Polygon,
+  Image,
+  HTML,
+  Marker,
+  Path,
+  Line,
+  Polyline,
 }
-
-class PathWithArrow extends GArrow {
-  public shapeType: string;
-  constructor(cfg) {
-    super(getLineConstructCfg(cfg, Path));
-
-    const { startArrow, endArrow } = cfg?.style || {};
-
-    const proxy = new Proxy(this, lineHandler);
-    proxy.combinedShape = true;
-    // attr 和其他图形不同
-    lineVarNames.forEach(funcName => {
-      this[funcName] = proxy[funcName];
-    });
-    this.set('startArrow', startArrow);
-    this.set('endArrow', endArrow);
-    this.shapeType = 'path';
-    return this;
-  }
-
-  public set(name, value) {
-    super.set(name, value);
-    return setFunc(this, name, value);
-  }
-
-  public get(name) {
-    const superValue = super.get(name);
-    return getFunc(this, name, superValue);
-  }
-
-  // @ts-ignore
-  public animate(...args) {
-    // @ts-ignore
-    const callAnimate = (...args) => super.animate(...args);
-    // @ts-ignore
-    this.getBody().animate(...args);
-    processAnimate(args, this, callAnimate);
-    return callAnimate;
-  }
-
-  public toFront() {
-    const canvas = this.get('canvas');
-    const callSuper = () => {
-      super.toFront();
-    }
-    toFrontBackFunc(canvas, callSuper);
-    return this;
-  }
-
-  public toBack() {
-    const canvas = this.get('canvas');
-    const callSuper = () => {
-      super.toBack();
-    }
-    toFrontBackFunc(canvas, callSuper);
-    return this;
-  }
-}
-
-class PolylineWithArrow extends GArrow {
-  public shapeType: string;
-  constructor(cfg) {
-    super(getLineConstructCfg(cfg, Polyline));
-
-    const { startArrow, endArrow } = cfg?.style || {};
-
-    const proxy = new Proxy(this, lineHandler);
-    proxy.combinedShape = true;
-    // attr 和其他图形不同
-    lineVarNames.forEach(funcName => {
-      this[funcName] = proxy[funcName];
-    });
-    this.set('startArrow', startArrow);
-    this.set('endArrow', endArrow);
-    this.shapeType = 'polyline';
-    return this;
-  }
-
-  public set(name, value) {
-    super.set(name, value);
-    return setFunc(this, name, value);
-  }
-
-  public get(name) {
-    const superValue = super.get(name);
-    return getFunc(this, name, superValue);
-  }
-
-  // @ts-ignore
-  public animate(...args) {
-    // @ts-ignore
-    const callAnimate = (...args) => super.animate(...args);
-    // @ts-ignore
-    this.getBody().animate(...args);
-    processAnimate(args, this, callAnimate);
-    return callAnimate;
-  }
-
-  public toFront() {
-    const canvas = this.get('canvas');
-    const callSuper = () => {
-      super.toFront();
-    }
-    toFrontBackFunc(canvas, callSuper);
-    return this;
-  }
-
-  public toBack() {
-    const canvas = this.get('canvas');
-    const callSuper = () => {
-      super.toBack();
-    }
-    toFrontBackFunc(canvas, callSuper);
-    return this;
-  }
-}
-
-export { Circle, Rect, Ellipse, Text, Polygon, Image, HTML, Marker, Path, LineWithArrow, PathWithArrow, PolylineWithArrow }

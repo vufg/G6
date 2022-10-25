@@ -1,6 +1,6 @@
 import { isFunction, isObject, isString } from '@antv/util';
 import { TextStyleProps } from '@antv/g';
-import { Circle, Path } from '../shapes';
+import { Circle } from '../shapes';
 import { SHAPE_CLASS_MAP, SYMBOL_PATH_FUNC_MAP } from '../constants';
 import { IShape } from '../interface';
 
@@ -59,8 +59,6 @@ const createShape = (shapeType, param, canvas) => {
 
 const createClipShape = (propShapeType, param, canvas) => {
   let shapeType = propShapeType;
-  // 若是 path 类型的 clip，不可以使用 g-adapter 抛出的 Path（它实际上是 PathWithArrow），需要用无箭头组合的 Path
-  if (shapeType === 'path') shapeType = 'simple-path';
   return createShape(shapeType, param, canvas);
 }
 

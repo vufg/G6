@@ -1,4 +1,7 @@
 import { Path } from '../shapes';
+// import { Path } from '@antv/g'; //  as GPath
+
+const DEFAULT_ARROW_PATH = 'M 12,6 L 0,0 L 12,-6';
 
 const getDefaultArrow = (pathStyle) => {
   const { sin, cos, PI } = Math;
@@ -12,11 +15,14 @@ const getDefaultArrow = (pathStyle) => {
   });
 }
 
-const getArrowHead = (arrow) => {
-  let arrowHead: boolean | Path = false;
+const getArrowHead = (arrow, bodyStyle = {}) => {
+  let arrowHead: Path = undefined;
+  if (!arrow) return;
   if (arrow === true) {
-    arrowHead = true;
+    arrow = {};
   }
+  arrow.path = arrow.path || DEFAULT_ARROW_PATH;
+  const { lineWidth = 1, stroke = '#5F95FF' } = bodyStyle as any;
   if (typeof arrow === 'object') {
     if (arrow.nodeName) {
       arrowHead = arrow;
@@ -26,6 +32,10 @@ const getArrowHead = (arrow) => {
         style: {
           x: 0,
           y: 0,
+          anchor: '0.5 0.5',
+          transformOrigin: 'center',
+          lineWidth,
+          stroke,
           ...otherAttrs,
         }
       });
@@ -34,24 +44,36 @@ const getArrowHead = (arrow) => {
   return arrowHead;
 }
 
-const updateArrow = (combinedShape, key, value) => {
-  if (!combinedShape) return;
+const updateArrow = (body, key, value) => {
+  if (!body) return;
+  const arrowKey = key === 'startArrow' ? 'markerStart' : 'markerEnd';
   if (!value) {
-    key === 'startArrow' ? combinedShape.style.startHead = false : combinedShape.style.endHead = false;
+    body.style[arrowKey] = undefined;
     return;
   }
-  const { d = 0, ...arrowStyle } = value;
-  const arrow = key === 'startArrow' ? combinedShape.getStartHead() : combinedShape.getEndHead();
+  let arrowStyle = {
+    lineWidth: body.style.lineWidth || 1,
+    stroke: body.style.stroke || '#5F95FF',
+  };
+  let d = 0;
+  if (typeof value === 'object') {
+    arrowStyle = value;
+    d = value.d;
+    delete (arrowStyle as any).d;
+  }
+  let arrow = body.style[arrowKey];
   // TODO: 需要确定 G 更新箭头的方法 https://codesandbox.io/s/how-to-update-arrow-head-f2qbl3?file=/index.js
-  // arrow.attr(arrowStyle);
-  // // const newArrow = getArrowHead(arrowStyle);
-  // if (key === 'startArrow') {
-  //   // combinedShape.style.startHead = newArrow;
-  //   combinedShape.style.startHeadOffset = - 2 * d;
-  // } else {
-  //   // combinedShape.style.endHead = newArrow;
-  //   combinedShape.style.endHeadOffset = - 2 * d;
-  // }
+  if (!arrow) {
+    arrow = getArrowHead(arrowStyle, body.attr());
+    body.style[arrowKey] = arrow;
+  } else {
+    arrow.attr(arrowStyle);
+  }
+  if (key === 'startArrow') {
+    body.style.markerEndOffset = - 2 * d;
+  } else {
+    body.style.markerStartOffset = - 2 * d;
+  }
 }
 
 export { getDefaultArrow, getArrowHead, updateArrow };

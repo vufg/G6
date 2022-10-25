@@ -1,5 +1,17 @@
 // import { Circle, Rect, Ellipse, Polygon, Image, Path, Text, HTML, Line } from '@antv/g';
-import { Circle, Rect, Ellipse, Polygon, Image, Path, Text, HTML, Marker, LineWithArrow, PolylineWithArrow, PathWithArrow } from '../shapes';
+import {
+  Circle,
+  Rect,
+  Ellipse,
+  Polygon,
+  Image,
+  Path,
+  Text,
+  HTML,
+  Marker,
+  Line,
+  Polyline,
+} from '../shapes';
 
 const EVENTS = [
   'click',
@@ -43,11 +55,10 @@ const SHAPE_CLASS_MAP = {
   'text': Text,
   'dom': HTML,
   // 'line': Line,
-  'line': LineWithArrow,
-  'polyline': PolylineWithArrow,
-  'path': PathWithArrow,
+  'line': Line,
+  'polyline': Polyline,
+  'path': Path,
   'marker': Marker, // TODO: 暂时没有 Marker
-  'simple-path': Path
 }
 const SYMBOL_PATH_FUNC_MAP = {
   'circle': (x, y, r) => [

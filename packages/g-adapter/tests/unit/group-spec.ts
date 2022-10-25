@@ -286,14 +286,14 @@ describe('group test', () => {
     // getCanvasBBox getBBox
     let canvasBBox = subGroup.getCanvasBBox();
     expect(canvasBBox.minX).toBe(30);
-    expect(canvasBBox.minY).toBe(90);
+    expect(canvasBBox.minY).toBe(85.85784912109375);
     expect(canvasBBox.maxX).toBe(350);
     expect(canvasBBox.maxY).toBe(320);
 
     let bbox = subGroup.getBBox();
     // 没设置矩阵之前， bbox 和 canvasBBox 是一样的
     expect(bbox.minX).toBe(30);
-    expect(bbox.minY).toBe(90);
+    expect(bbox.minY).toBe(85.85784912109375);
     expect(bbox.maxX).toBe(350);
     expect(bbox.maxY).toBe(320);
 
@@ -302,12 +302,12 @@ describe('group test', () => {
     subGroup.scale(2, 2);
     canvasBBox = subGroup.getCanvasBBox();
     expect(canvasBBox.minX).toBe(160);
-    expect(canvasBBox.minY).toBe(180);
+    expect(canvasBBox.minY).toBe(171.7156982421875);
     expect(canvasBBox.maxX).toBe(800);
     expect(canvasBBox.maxY).toBe(640);
     bbox = subGroup.getBBox();
     expect(bbox.minX).toBe(160);
-    expect(bbox.minY).toBe(180);
+    expect(bbox.minY).toBe(171.7156982421875);
     expect(bbox.maxX).toBe(800);
     expect(bbox.maxY).toBe(640);
   });
@@ -364,12 +364,12 @@ describe('group test', () => {
     // 对复制的 group 操作不影响原 group
     const canvasBBox = subGroup.getCanvasBBox();
     expect(canvasBBox.minX).toBe(160);
-    expect(canvasBBox.minY).toBe(180);
+    expect(canvasBBox.minY).toBe(171.7156982421875);
     expect(canvasBBox.maxX).toBe(800);
     expect(canvasBBox.maxY).toBe(640);
     const bbox = subGroup.getBBox();
     expect(bbox.minX).toBe(160);
-    expect(bbox.minY).toBe(180);
+    expect(bbox.minY).toBe(171.7156982421875);
     expect(bbox.maxX).toBe(800);
     expect(bbox.maxY).toBe(640);
   });
@@ -405,7 +405,7 @@ describe('group test', () => {
     expect(subGroup.adaptedEle.attributes.visibility).toBe('hidden');
     subGroup.set('visible', true);
     expect(subGroup.get('visible')).toBe(true);
-    expect(subGroup.adaptedEle.attributes.visibility).toBe('visible');
+    expect(subGroup.adaptedEle.attributes.visibility).toBe('');
   });
   it.only('getParent getCanvas', () => {
     expect(subGroup.getCanvas()).not.toBe(undefined);

@@ -52,7 +52,7 @@ describe('path test', () => {
     })
 
     expect(lineArrow.attr('x1')).toBe(50);
-    expect(lineArrow.getBody().style.x1).toBe(50);
+    expect(lineArrow.style.x1).toBe(50);
 
     lineArrow.attr('x1', 100);
     lineArrow.attr('y1', 200);
@@ -61,21 +61,21 @@ describe('path test', () => {
 
     expect(lineArrow.attr('stroke')).toBe('#509FEE');
     expect(lineArrow.style.stroke).toBe('#509FEE');
-    expect(lineArrow.getBody().style.stroke).toBe('#509FEE');
+    expect(lineArrow.style.stroke).toBe('#509FEE');
 
-    expect(lineArrow.getEndHead().style.fill).toBe('#f00');
+    expect(lineArrow.style.markerEnd.style.fill).toBe('#f00');
     expect(lineArrow.attr('fill')).toBe("");
 
     lineArrow.attr('startArrow', true);
     expect(lineArrow.attr('startArrow')).toBe(true);
-    expect(!!lineArrow.style.startHead).toBe(true);
+    expect(!!lineArrow.style.markerStart).toBe(true);
 
     lineArrow.attr('startArrow', {
       fill: '#0f0',
       path: 'M 0,0 L 12,-6 L 10,0 L 12,6 Z'
     });
     expect(typeof lineArrow.attr('startArrow')).toBe('object');
-    expect(typeof lineArrow.style.startHead).toBe('object');
+    expect(typeof lineArrow.style.markerStart).toBe('object');
 
     lineArrow.attr({ endArrow: false });
     expect(lineArrow.attr('endArrow')).toBe(false);
@@ -110,7 +110,7 @@ describe('path test', () => {
     expect(pathArrow.attr('endArrow')).not.toBe(undefined);
 
     expect(pathArrow.attr('path')).toBe(path);
-    expect(pathArrow.getBody().style.path).toBe(path);
+    expect(pathArrow.style.path).toBe(path);
 
     const path2 = [
       ['M', 300, 300],
@@ -118,28 +118,27 @@ describe('path test', () => {
       ['L', 400, 350],
     ]
 
-    // pathArrow.attr('path', path2);
     pathArrow.attr({ 'path': path2 });
     expect(pathArrow.attr('path')[0][0]).toBe('M');
     expect(pathArrow.attr('path')[1][0]).toBe('L');
 
     expect(pathArrow.attr('stroke')).toBe('#509FEE');
     expect(pathArrow.style.stroke).toBe('#509FEE');
-    expect(pathArrow.getBody().style.stroke).toBe('#509FEE');
+    expect(pathArrow.style.stroke).toBe('#509FEE');
 
-    expect(pathArrow.getEndHead().style.fill).toBe('#f00');
+    expect(pathArrow.style.markerEnd.style.fill).toBe('#f00');
     expect(pathArrow.attr('fill')).toBe("");
 
     pathArrow.attr('startArrow', true);
     expect(pathArrow.attr('startArrow')).toBe(true);
-    expect(!!pathArrow.style.startHead).toBe(true);
+    expect(!!pathArrow.style.markerStart).toBe(true);
 
     pathArrow.attr('startArrow', {
       fill: '#0f0',
       path: 'M 0,0 L 12,-6 L 10,0 L 12,6 Z'
     });
     expect(typeof pathArrow.attr('startArrow')).toBe('object');
-    expect(typeof pathArrow.style.startHead).toBe('object');
+    expect(typeof pathArrow.style.markerStart).toBe('object');
 
     pathArrow.attr({ endArrow: false });
     expect(pathArrow.attr('endArrow')).toBe(false);
@@ -182,7 +181,7 @@ describe('path test', () => {
 
     expect(polylineArrow.attr('points')).toBe(points);
     expect(polylineArrow.attr('points').length).toBe(6);
-    expect(polylineArrow.getBody().style.points).toBe(points);
+    expect(polylineArrow.style.points).toBe(points);
 
     const points2 = [
       [350, 100],
@@ -197,21 +196,21 @@ describe('path test', () => {
 
     expect(polylineArrow.attr('stroke')).toBe('#509FEE');
     expect(polylineArrow.style.stroke).toBe('#509FEE');
-    expect(polylineArrow.getBody().style.stroke).toBe('#509FEE');
+    expect(polylineArrow.style.stroke).toBe('#509FEE');
 
-    expect(polylineArrow.getEndHead().style.fill).toBe('#f00');
+    expect(polylineArrow.style.markerEnd.style.fill).toBe('#f00');
     expect(polylineArrow.attr('fill')).toBe("");
 
     polylineArrow.attr('startArrow', true);
     expect(polylineArrow.attr('startArrow')).toBe(true);
-    expect(!!polylineArrow.style.startHead).toBe(true);
+    expect(!!polylineArrow.style.markerStart).toBe(true);
 
     polylineArrow.attr('startArrow', {
       fill: '#0f0',
       path: 'M 0,0 L 12,-6 L 10,0 L 12,6 Z'
     });
     expect(typeof polylineArrow.attr('startArrow')).toBe('object');
-    expect(typeof polylineArrow.style.startHead).toBe('object');
+    expect(typeof polylineArrow.style.markerStart).toBe('object');
 
     polylineArrow.attr({ endArrow: false });
     expect(polylineArrow.attr('endArrow')).toBe(false);
@@ -227,7 +226,6 @@ describe('path test', () => {
     lineArrow.attr('x1', 50);
     lineArrow.attr('y1', 50);
     const expectLength1 = 50 * Math.sqrt(2);
-    expect(approximate(lineArrow.getBody().getTotalLength(), expectLength1)).toBe(true);
     expect(approximate(lineArrow.getTotalLength(), expectLength1)).toBe(true);
 
     // path r1 * PI + r2 * PI
@@ -236,12 +234,10 @@ describe('path test', () => {
       path: "M 100,300 m -50,0 a 25,25 0 1,0 50,0 a 25,25 0 1,0 -50,0",
     });
     const expectLength2 = 25 * Math.PI * 2;
-    expect(approximate(pathArrow.getBody().getTotalLength(), expectLength2)).toBe(true);
     expect(approximate(pathArrow.getTotalLength(), expectLength2)).toBe(true);
 
     // polyline
     const expectLength3 = 50 * 4;
-    expect(approximate(polylineArrow.getBody().getTotalLength(), expectLength3)).toBe(true);
     expect(approximate(polylineArrow.getTotalLength(), expectLength3)).toBe(true);
   });
 
