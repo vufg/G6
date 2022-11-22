@@ -526,12 +526,13 @@ const data = {
     { id: 'node1', x: 50, y: 100 },
     { id: 'node2', x: 150, y: 100 },
   ],
-  edges: [(source: 'node1'), (target: 'node2')],
+  edges: [{ source: 'node1', target: 'node2' }],
 };
 const graph = new G6.Graph({
   container: 'mountNode',
   width: 500,
   height: 500,
+  renderer: 'svg', // !!务必确保 renderer 被指定为 'svg'，否则自定义 DOM 节点将报错
   defaultNode: {
     type: 'dom-node',
     size: [120, 40],
