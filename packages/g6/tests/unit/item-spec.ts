@@ -707,7 +707,6 @@ describe('register node', () => {
         return keyShape
       }
       public drawOtherShapes(model: NodeDisplayModel, shapeMap: NodeShapeMap, diffData?: { oldData: NodeModelData; newData: NodeModelData; }) {
-        console.log('drawothershape')
         const testShape = upsertShape(
           'line',
           'testShape',
@@ -780,7 +779,6 @@ describe('register node', () => {
       expect(node2.shapeMap.testShape).toBe(undefined);
       expect(node2.shapeMap.keyShape.nodeName).toBe('circle');
 
-      console.log('goingto update')
       // update circle-node to custom-node
       graph.updateData('node', {
         id: 'node2',
