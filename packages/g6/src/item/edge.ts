@@ -1,5 +1,4 @@
 import { Group } from '@antv/g';
-import { ID } from '@antv/graphlib';
 import { EdgeDisplayModel, EdgeModel } from '../types';
 import { EdgeModelData } from '../types/edge';
 import { DisplayMapper, ITEM_TYPE, State } from '../types/item';
