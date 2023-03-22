@@ -52,8 +52,12 @@ export default abstract class Item implements IItem {
     [stateName: string]: ItemShapeStyles;
   }
 
+  private device: any; // for 3d
+
   // TODO: props type
-  constructor(props) {}
+  constructor(props) {
+    this.device = props.device;
+  }
 
   public init(props) {
     const { model, containerGroup, mapper, stateMapper, renderExtensions, themeStyles = {} } = props;
@@ -69,7 +73,7 @@ export default abstract class Item implements IItem {
     const { type = this.type === 'node' ? 'circle-node' : 'line-edge' } = this.displayModel.data;
     const RenderExtension = renderExtensions.find((ext) => ext.type === type);
     this.themeStyles = themeStyles;
-    this.renderExt = new RenderExtension({ themeStyles: this.themeStyles.default });
+    this.renderExt = new RenderExtension({ themeStyles: this.themeStyles.default, device: this.device });
   }
 
   public draw(displayModel: ItemDisplayModel, diffData?: { previous: ItemModelData; current: ItemModelData }, diffState?: { previous: State[], current: State[] }) {
@@ -108,7 +112,7 @@ export default abstract class Item implements IItem {
       this.shapeMap = { keyShape: undefined };
       const { type = this.type === 'node' ? 'circle-node' : 'line-edge' } = displayModel.data;
       const RenderExtension = this.renderExtensions.find((ext) => ext.type === type);
-      this.renderExt = new RenderExtension({ themeStyles: this.themeStyles.default });
+      this.renderExt = new RenderExtension({ themeStyles: this.themeStyles.default, device: this.device });
     } else {
       this.renderExt.themeStyles = this.themeStyles.default;
     }

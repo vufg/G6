@@ -1,18 +1,20 @@
 import { AABB, Canvas, DisplayObject, Group } from '@antv/g';
 import { GraphChange, ID } from '@antv/graphlib';
-import { isArray, isObject } from '@antv/util';
-import Combo from '../../item/combo';
-import Edge from '../../item/edge';
-import Node from '../../item/node';
 import registry from '../../stdlib';
-import { ComboModel, IGraph } from '../../types';
-import { ComboDisplayModel, ComboEncode } from '../../types/combo';
+import { ComboModel, IGraph, NodeModel, NodeDisplayModel } from '../../types';
 import { GraphCore } from '../../types/data';
 import { EdgeDisplayModel, EdgeEncode, EdgeModel, EdgeModelData } from '../../types/edge';
-import { ITEM_TYPE, ShapeStyle, SHAPE_TYPE } from '../../types/item';
-import { ItemStyleSet, ItemThemeSpecifications, ThemeSpecification } from '../../types/theme';
+import Node from '../../item/node';
+import Edge from '../../item/edge';
+import Combo from '../../item/combo';
+import { upsertShape } from '../../util/shape'
 import { getExtension } from '../../util/extension';
-import { upsertShape } from '../../util/shape';
+import { ITEM_TYPE, ShapeStyle, SHAPE_TYPE } from '../../types/item';
+import { ComboDisplayModel, ComboEncode } from '../../types/combo';
+import { ThemeSpecification, ItemThemeSpecifications, ItemStyleSet } from '../../types/theme';
+import { isArray, isObject } from '@antv/util';
+import { DirectionalLight, AmbientLight } from '@antv/g-plugin-3d';
+import { NodeEncode } from '../../types/node';
 
 /**
  * Manages and stores the node / edge / combo items.
@@ -116,7 +118,8 @@ export class ItemController {
   private onRender(param: { graphCore: GraphCore; theme: ThemeSpecification }) {
     const { graphCore, theme = {} } = param;
     const { graph } = this;
-    // TODO: 0. clear groups on canvas, and create new groups
+
+    // 0. clear groups on canvas, and create new groups
     graph.canvas.removeChildren();
     const edgeGroup = new Group({ id: 'edge-group' });
     const nodeGroup = new Group({ id: 'node-group' });
@@ -125,7 +128,28 @@ export class ItemController {
     this.nodeGroup = nodeGroup;
     this.edgeGroup = edgeGroup;
 
-    // TODO: 1. create node / edge / combo items, classes from ../../item, and element drawing and updating fns from node/edge/comboExtensions
+
+    // 1. create lights for webgl 3d rendering
+    if (graph.rendererType === 'webgl') {
+      const ambientLight = new AmbientLight({
+        style: {
+          fill: '#ccc',
+          intensity: Math.PI
+        },
+      });
+      const light = new DirectionalLight({
+        style: {
+          fill: '#ccc',
+          direction: [-1, 0, 1],
+          intensity: Math.PI
+        },
+      });
+      graph.canvas.appendChild(ambientLight);
+      graph.canvas.appendChild(light);
+      graph.canvas.getCamera().setPerspective(0.1, 1000, 75, 600 / 500);
+    }
+
+    // 2. create node / edge / combo items, classes from ../../item, and element drawing and updating fns from node/edge/comboExtensions
     const nodeModels = graphCore.getAllNodes();
     const edgeModels = graphCore.getAllEdges();
     // const combos = graphCore.getAllCombos();
@@ -353,7 +377,7 @@ export class ItemController {
    * @param models nodes' inner datas
    */
   private renderNodes(models: NodeModel[], nodeTheme: ItemThemeSpecifications = {}) {
-    const { nodeExtensions, nodeGroup, nodeDataTypeSet } = this;
+    const { nodeExtensions, nodeGroup, nodeDataTypeSet, graph } = this;
     const { dataTypeField } = nodeTheme;
     models.forEach((node) => {
       // get the base styles from theme
@@ -368,6 +392,7 @@ export class ItemController {
         mapper: this.nodeMapper,
         stateMapper: this.nodeStateMapper,
         themeStyles: themeStyle,
+        device: graph.rendererType === 'webgl' ? graph.canvas.context.deviceRendererPlugin.getDevice() : undefined
       });
     });
   }

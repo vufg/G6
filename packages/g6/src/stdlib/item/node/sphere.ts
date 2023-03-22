@@ -2,32 +2,35 @@ import { DisplayObject } from '@antv/g';
 import { NodeDisplayModel } from '../../../types';
 import { ItemShapeStyles, State } from '../../../types/item';
 import { NodeModelData, NodeShapeMap } from '../../../types/node';
-import { BaseNode } from './base';
+import { BaseNode3D } from './base3d';
 
-export class CircleNode extends BaseNode {
+export class SphereNode extends BaseNode3D {
   override defaultStyles = {
     keyShape: {
       r: 15,
+      latitudeBands: 32,
+      longitudeBands: 32,
       x: 0,
       y: 0,
+      z: 0,
+      opacity: 0.6
     }
   };
   mergedStyles: ItemShapeStyles;
   constructor(props) {
     super(props);
-    // suggest to merge default styles like this to avoid style value missing
-    // this.defaultStyles = mergeStyles([this.baseDefaultStyles, this.defaultStyles]);
   }
   public draw(
     model: NodeDisplayModel,
     shapeMap: NodeShapeMap,
     diffData?: { previous: NodeModelData; current: NodeModelData },
-    diffState?: { previous: State[], current: State[] }
+    diffState?: { previous: State[], current: State[] },
   ): NodeShapeMap {
     const { data = {} } = model;
     let shapes: NodeShapeMap = { keyShape: undefined };
 
     shapes.keyShape = this.drawKeyShape(model, shapeMap, diffData);
+    console.log('shapes.keyShape', shapes.keyShape)
     if (data.labelShape) {
       shapes = {
         ...shapes,
@@ -52,6 +55,6 @@ export class CircleNode extends BaseNode {
     diffData?: { previous: NodeModelData; current: NodeModelData },
     diffState?: { previous: State[], current: State[] }
   ): DisplayObject {
-    return this.upsertShape('circle', 'keyShape', this.mergedStyles.keyShape, shapeMap);
+    return this.upsertShape('sphere', 'keyShape', this.mergedStyles.keyShape, shapeMap);
   }
 }

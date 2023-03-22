@@ -215,4 +215,13 @@ export abstract class BaseEdge {
 
     return upsertShape(iconShapeType, 'iconShape', shapeStyle, shapeMap);
   }
+
+  public upsertShape(
+    type: string,
+    id: string,
+    style: { [shapeAttr: string]: unknown },
+    shapeMap: { [shapeId: string]: DisplayObject },
+  ): DisplayObject {
+    return upsertShape(type, id, style, shapeMap);
+  };
 }

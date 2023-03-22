@@ -6,7 +6,7 @@ import BrushSelect from './behavior/brush-select';
 import LassoSelect from './behavior/lasso-select';
 import { comboFromNode } from './data/comboFromNode';
 import { LineEdge } from './item/edge';
-import { CircleNode } from './item/node';
+import { CircleNode, SphereNode } from './item/node';
 import SpecThemeSolver from './themeSolver/spec';
 import LightTheme from './theme/light';
 import DarkTheme from './theme/dark';
@@ -35,7 +35,8 @@ const stdLib = {
   },
   plugins: {},
   nodes: {
-    'circle-node': CircleNode
+    'circle-node': CircleNode,
+    'sphere-node': SphereNode,
   },
   edges: {
     'line-edge': LineEdge

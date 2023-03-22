@@ -24,6 +24,7 @@ import {
   StandardLayoutOptions,
 } from '../types/layout';
 import { NodeModel, NodeModelData } from '../types/node';
+import { RendererName } from '../types/render';
 import { ThemeRegistry, ThemeSpecification } from '../types/theme';
 import { FitViewRules, GraphTransformOptions } from '../types/view';
 import { createCanvas } from '../util/canvas';
@@ -53,6 +54,8 @@ export default class Graph<B extends BehaviorRegistry, T extends ThemeRegistry>
   public canvas: Canvas;
   // the tag to indicate whether the graph instance is destroyed
   public destroyed: boolean;
+  // the renderer type of current graph
+  public rendererType: RendererName;
   // for background shapes, e.g. grid, pipe indices
   private backgroundCanvas: Canvas;
   // for transient shapes for interactions, e.g. transient node and related edges while draging, delegates
@@ -114,22 +117,24 @@ export default class Graph<B extends BehaviorRegistry, T extends ThemeRegistry>
 
   private initCanvas() {
     const { renderer, container, width, height } = this.specification;
-    let rendererType;
     let pixelRatio;
     if (renderer && !isString(renderer)) {
-      rendererType = renderer.type || 'canvas';
+      // @ts-ignore
+      this.rendererType = renderer.type || 'canvas';
+      // @ts-ignore
       pixelRatio = renderer.pixelRatio;
     } else {
-      rendererType = renderer || 'canvas';
+      // @ts-ignore
+      this.rendererType = renderer || 'canvas';
     }
-    this.backgroundCanvas = createCanvas(rendererType, container, width, height, pixelRatio);
-    this.canvas = createCanvas(rendererType, container, width, height, pixelRatio);
-    this.transientCanvas = createCanvas(rendererType, container, width, height, pixelRatio, true, {
+    this.backgroundCanvas = createCanvas(this.rendererType, container, width, height, pixelRatio);
+    this.canvas = createCanvas(this.rendererType, container, width, height, pixelRatio);
+    this.transientCanvas = createCanvas(this.rendererType, container, width, height, pixelRatio, true, {
       pointerEvents: 'none',
     });
     Promise.all(
       [this.backgroundCanvas, this.canvas, this.transientCanvas].map((canvas) => canvas.ready),
-    ).then(() => (this.canvasReady = true));
+    ).then(() => this.canvasReady = true);
   }
 
   /**

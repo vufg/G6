@@ -43,7 +43,7 @@
     "lint:src": "eslint --ext .ts --format=pretty \"./src\"",
     "prettier": "prettier -c --write \"**/*\"",
     "test": "jest",
-    "test-live": "DEBUG_MODE=1 jest --watch  ./tests/unit/theme-subject-spec.ts",
+    "test-live": "DEBUG_MODE=1 jest --watch  ./tests/unit/item-3d-spec.ts",
     "test-behavior": "DEBUG_MODE=1 jest --watch ./tests/unit/click-select-spec.ts",
     "lint-staged:js": "eslint --ext .js,.jsx,.ts,.tsx",
     "watch": "father build -w"
@@ -62,6 +62,8 @@
     "@ant-design/colors": "^7.0.0",
     "@antv/g": "^5.15.7",
     "@antv/g-canvas": "^1.9.28",
+    "@antv/g-plugin-3d": "^1.7.45",
+    "@antv/g-plugin-control": "^1.7.43",
     "@antv/g-svg": "^1.8.36",
     "@antv/g-webgl": "^1.7.44",
     "@antv/graphlib": "^2.0.0",
