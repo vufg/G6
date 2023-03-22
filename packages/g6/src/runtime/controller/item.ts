@@ -14,7 +14,7 @@ import { ComboDisplayModel, ComboEncode } from '../../types/combo';
 import { ThemeSpecification, ItemThemeSpecifications, ItemStyleSet } from '../../types/theme';
 import { isArray, isObject } from '@antv/util';
 import { DirectionalLight, AmbientLight } from '@antv/g-plugin-3d';
-import { NodeEncode } from '../../types/node';
+import { NodeEncode, NodeModelData } from '../../types/node';
 
 /**
  * Manages and stores the node / edge / combo items.
