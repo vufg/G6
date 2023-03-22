@@ -1,6 +1,6 @@
-export { IGraph } from './graph';
-export { GraphData } from './data';
-export { NodeUserModel, NodeModel, NodeDisplayModel } from './node';
-export { EdgeUserModel, EdgeModel, EdgeDisplayModel } from './edge';
-export { ComboUserModel, ComboModel, ComboDisplayModel } from './combo';
-export { Specification } from './spec';
+export type { ComboDisplayModel, ComboModel, ComboUserModel } from './combo';
+export type { GraphData } from './data';
+export type { EdgeDisplayModel, EdgeModel, EdgeUserModel } from './edge';
+export type { IGraph } from './graph';
+export type { NodeDisplayModel, NodeModel, NodeUserModel } from './node';
+export type { Specification } from './spec';
