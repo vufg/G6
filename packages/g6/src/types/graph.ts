@@ -1,12 +1,12 @@
 import EventEmitter from '@antv/event-emitter';
-import { Canvas, AABB, DisplayObject } from '@antv/g';
+import { AABB, Canvas, DisplayObject } from '@antv/g';
 import { ID } from '@antv/graphlib';
 import { Hooks } from '../types/hook';
 import { AnimateCfg } from './animate';
 import { BehaviorObjectOptionsOf, BehaviorOptionsOf, BehaviorRegistry } from './behavior';
 import { ComboModel, ComboUserModel } from './combo';
 import { Padding, Point } from './common';
-import { DataChangeType, GraphData } from './data';
+import { GraphData } from './data';
 import { EdgeModel, EdgeUserModel } from './edge';
 import { ITEM_TYPE, SHAPE_TYPE } from './item';
 import { LayoutOptions } from './layout';
