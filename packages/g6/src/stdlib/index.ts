@@ -13,6 +13,7 @@ import DarkTheme from './theme/dark';
 import SubjectThemeSolver from './themeSolver/subject';
 import rectSelector from './selector/rect';
 import lassoSelector from './selector/lasso';
+import Minimap from './plugin/minimap';
 
 const stdLib = {
   transforms: {
@@ -33,7 +34,9 @@ const stdLib = {
     'brush-select': BrushSelect,
     'lasso-select': LassoSelect
   },
-  plugins: {},
+  plugins: {
+    'minimap': Minimap,
+  },
   nodes: {
     'circle-node': CircleNode
   },
